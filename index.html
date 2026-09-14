@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CohrWurm</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #15130f;
+    --panel: #1e1b15;
+    --panel-raised: #262119;
+    --screen: #100e0a;
+    --ink: #ece4d3;
+    --ink-dim: #a99b81;
+    --ink-faint: #6e6350;
+    --accent: #d68c45;
+    --accent-dim: #8a5b2c;
+    --good: #7fbf7f;
+    --good-dim: #3f6b45;
+    --bad: #cf6b56;
+    --bad-dim: #7a3c30;
+    --hair: #382f22;
+    --focus: #e3a55e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15130f;
+      --panel: #1e1b15;
+      --panel-raised: #262119;
+      --screen: #100e0a;
+      --ink: #ece4d3;
+      --ink-dim: #a99b81;
+      --ink-faint: #6e6350;
+      --accent: #d68c45;
+      --accent-dim: #8a5b2c;
+      --good: #7fbf7f;
+      --good-dim: #3f6b45;
+      --bad: #cf6b56;
+      --bad-dim: #7a3c30;
+      --hair: #382f22;
+      --focus: #e3a55e;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15130f;
+    --panel: #1e1b15;
+    --panel-raised: #262119;
+    --screen: #100e0a;
+    --ink: #ece4d3;
+    --ink-dim: #a99b81;
+    --ink-faint: #6e6350;
+    --accent: #d68c45;
+    --accent-dim: #8a5b2c;
+    --good: #7fbf7f;
+    --good-dim: #3f6b45;
+    --bad: #cf6b56;
+    --bad-dim: #7a3c30;
+    --hair: #382f22;
+    --focus: #e3a55e;
+  }
+  :root[data-theme="light"] {
+    --bg: #f2ead9;
+    --panel: #fbf6ea;
+    --panel-raised: #ffffff;
+    --screen: #ece2c9;
+    --ink: #2b2318;
+    --ink-dim: #6b5c44;
+    --ink-faint: #9a8a6c;
+    --accent: #a1601f;
+    --accent-dim: #c98a44;
+    --good: #3f7d4a;
+    --good-dim: #bfe0c2;
+    --bad: #a5402c;
+    --bad-dim: #f0c9be;
+    --hair: #ddcda6;
+    --focus: #8a4c15;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Work Sans', system-ui, sans-serif;
+    padding: 0 16px;
+    padding-block: 28px 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100%;
+  }
+  .wrap { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: 16px; }
+
+  h1, h2, h3 { font-family: 'Special Elite', 'Courier New', monospace; font-weight: 400; text-wrap: balance; margin: 0; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  header.top { display: flex; flex-direction: column; gap: 4px; }
+  header.top .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  header.top h1 { font-size: 26px; color: var(--accent); display: flex; align-items: center; gap: 10px; }
+  .lamp {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--ink-faint);
+    box-shadow: inset 0 0 2px rgba(0,0,0,0.4);
+    transition: background 60ms linear, box-shadow 60ms linear;
+    flex: none;
+  }
+  .lamp.on { background: var(--accent); box-shadow: 0 0 8px 2px var(--accent), inset 0 0 2px rgba(0,0,0,0.2); }
+
+  .meter-row {
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .meter {
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    border-radius: 8px;
+    padding: 8px 14px;
+    display: flex; flex-direction: column; gap: 2px;
+    min-width: 108px;
+  }
+  .meter .label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+  .meter .value { font-family: 'JetBrains Mono', monospace; font-size: 19px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .meter .value small { font-size: 12px; color: var(--ink-dim); font-family: 'Work Sans', sans-serif; }
+
+  .tabs-row {
+    display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--hair);
+  }
+  nav.tabs {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .cheat-toggle { margin-bottom: 6px; padding: 7px 14px; font-size: 12px; }
+  nav.tabs button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px 6px 12px;
+    cursor: pointer;
+  }
+  nav.tabs button:hover { color: var(--ink); }
+  nav.tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  nav.tabs button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .cheatsheet {
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .cheatsheet[hidden] { display: none; }
+  .cheat-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .cheat-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 40px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--hair);
+    background: var(--panel-raised);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .cheat-tile:hover { border-color: var(--accent-dim); }
+  .cheat-tile:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .cheat-tile.new {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+    position: relative;
+  }
+  .cheat-tile.new::after {
+    content: "NEU";
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.06em;
+    background: var(--accent);
+    color: var(--bg);
+    border-radius: 3px;
+    padding: 1px 4px;
+  }
+  .cheat-letter {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--ink);
+    text-transform: uppercase;
+  }
+  .cheat-pattern {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+
+  .screen {
+    background: var(--screen);
+    border: 1px solid var(--hair);
+    border-radius: 10px;
+    padding: 22px;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    box-shadow: inset 0 1px 8px rgba(0,0,0,0.35);
+  }
+  [data-theme="light"] .screen, :root:not([data-theme="dark"]) .screen { box-shadow: inset 0 1px 6px rgba(0,0,0,0.08); }
+
+  .hint { color: var(--ink-dim); font-size: 14px; line-height: 1.5; max-width: 60ch; }
+
+  .btn {
+    font-family: 'Work Sans', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    border-radius: 7px;
+    padding: 11px 20px;
+    cursor: pointer;
+    transition: filter 100ms;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { filter: brightness(0.94); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .btn.secondary {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--hair);
+  }
+  .btn.secondary:hover { border-color: var(--accent-dim); }
+
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  input[type="text"] {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--hair);
+    border-radius: 7px;
+    padding: 10px 12px;
+    flex: 1;
+    min-width: 0;
+  }
+  input[type="text"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+  .diff { font-family: 'JetBrains Mono', monospace; font-size: 22px; letter-spacing: 0.12em; word-break: break-all; }
+  .diff .ok { color: var(--good); }
+  .diff .no { color: var(--bad); text-decoration: line-through; text-decoration-color: var(--bad-dim); }
+  .diff .miss { color: var(--ink-faint); }
+
+  .target-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 30px;
+    letter-spacing: 0.18em;
+    color: var(--ink);
+    text-align: center;
+    padding: 14px 0;
+  }
+  .target-display .done { color: var(--good); }
+  .target-display .no { color: var(--bad); text-decoration: line-through; text-decoration-color: var(--bad-dim); }
+  .target-display .pending { color: var(--ink-faint); }
+  .target-display .cursor { color: var(--accent); }
+
+  .send-debug-list {
+    font-size: 12px;
+    color: var(--ink-dim);
+    max-height: 160px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    border-radius: 8px;
+  }
+  .send-debug-list .letter-ok { color: var(--good); }
+  .send-debug-list .letter-no { color: var(--bad); }
+
+  .key-btn {
+    align-self: center;
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--panel-raised), var(--panel));
+    border: 3px solid var(--hair);
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    transition: transform 60ms, border-color 60ms, box-shadow 60ms;
+  }
+  .key-btn:hover { border-color: var(--accent-dim); }
+  .key-btn.pressed {
+    transform: scale(0.96);
+    border-color: var(--accent);
+    box-shadow: 0 0 22px 4px color-mix(in srgb, var(--accent) 40%, transparent);
+    color: var(--accent);
+  }
+  .key-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
+
+  .flash-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    gap: 8px;
+  }
+  .flash-grid button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--hair);
+    border-radius: 7px;
+    padding: 12px 0;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .flash-grid button:hover { border-color: var(--accent-dim); }
+  .flash-grid button.correct { background: var(--good-dim); border-color: var(--good); color: var(--ink); }
+  .flash-grid button.wrong { background: var(--bad-dim); border-color: var(--bad); color: var(--ink); }
+  .flash-grid button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+  .char-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+    gap: 6px;
+  }
+  .char-tile {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    color: var(--ink-faint);
+    font-size: 15px;
+  }
+  .char-tile.locked { opacity: 0.35; }
+  .char-tile.good { background: var(--good-dim); color: var(--ink); border-color: var(--good); }
+  .char-tile.mid { background: color-mix(in srgb, var(--accent) 30%, var(--panel)); color: var(--ink); border-color: var(--accent-dim); }
+  .char-tile.bad { background: var(--bad-dim); color: var(--ink); border-color: var(--bad); }
+
+  fieldset { border: 1px solid var(--hair); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  legend { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-dim); padding: 0 6px; }
+  label.field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink-dim); }
+  input[type="range"] { accent-color: var(--accent); }
+  .switch-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-dim); }
+
+  .stats-line { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-dim); }
+  .stats-line strong { color: var(--ink); font-family: 'JetBrains Mono', monospace; }
+
+  .promo-bar-wrap { display: flex; flex-direction: column; gap: 6px; }
+  .promo-bar-label { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--ink-dim); }
+  .promo-bar { position: relative; height: 8px; border-radius: 4px; background: var(--hair); overflow: hidden; }
+  .promo-bar-fill { position: absolute; inset: 0; width: 0%; background: var(--accent); border-radius: 4px; transition: width 200ms ease; }
+  .promo-bar.counting .promo-bar-fill { background: var(--ink-faint); }
+  .promo-bar-fill.hit { background: var(--good); }
+  .promo-bar-goal { position: absolute; top: 0; bottom: 0; left: 90%; width: 2px; background: var(--ink); opacity: 0.5; }
+
+  footer.note { font-size: 12px; color: var(--ink-faint); text-align: center; max-width: 60ch; }
+
+  @media (max-width: 460px) {
+    .key-btn { width: 112px; height: 112px; }
+    .target-display { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">Koch-Methode &middot; Adaptiver Morse-Trainer</div>
+    <h1><span class="lamp" id="lamp"></span> CohrWurm</h1>
+  </header>
+
+  <div class="meter-row">
+    <div class="meter"><div class="label">Zeichen</div><div class="value mono" id="mUnlocked">2 / 40</div></div>
+    <div class="meter"><div class="label">Zeichen-Tempo</div><div class="value mono" id="mChar">15 <small>WPM</small></div></div>
+    <div class="meter"><div class="label">Effektiv-Tempo</div><div class="value mono" id="mEff">5 <small>WPM</small></div></div>
+    <div class="meter"><div class="label">Durchg&auml;nge</div><div class="value mono" id="mReps">0</div></div>
+  </div>
+
+  <div class="tabs-row">
+    <nav class="tabs" id="tabs">
+      <button data-tab="copy" class="active">H&ouml;ren</button>
+      <button data-tab="send">Geben</button>
+      <button data-tab="flash">Flashcards</button>
+      <button data-tab="progress">Fortschritt</button>
+    </nav>
+    <button class="btn secondary cheat-toggle" id="cheatToggle">Spickzettel</button>
+  </div>
+
+  <div class="cheatsheet" id="cheatsheet">
+    <div class="cheat-grid" id="cheatGrid"></div>
+  </div>
+
+  <section class="screen" id="screen"></section>
+
+  <footer class="note">Fortschritt wird lokal in diesem Browser gespeichert (localStorage).</footer>
+</div>
+
+<script type="module">
+import {
+  MORSE, REVERSE, KOCH_ORDER, PROSIGN_START, PROSIGN_END,
+  state, timing, unlockedChars, weightedChar, weightedGroup,
+  recordResult, nextPromotion, toDots, buildSchedule,
+  classifySendPress, sendLetterGapMs, dotMs
+} from './logic.mjs';
+
+(function () {
+  "use strict";
+
+  // ---------- Persistence bookkeeping ----------
+  // (Morse data, Koch order, adaptive-logic state and pure functions now
+  // live in logic.mjs and are imported above; this file keeps
+  // persistence, audio and UI/rendering.)
+  var STORAGE_KEY = "cohrwurm-progress-v1";
+  var saveTimer = null;
+
+  function promotionBlockHtml() {
+    if (!state.autoAdvance) {
+      return '<p class="hint">Automatische Anpassung ist deaktiviert – Tempo und Freischaltung ändern sich nicht automatisch.</p>';
+    }
+    var promo = nextPromotion();
+    var action;
+    var nextCharHint = "";
+    if (promo.type === "raiseEff") {
+      action = "das Effektiv-Tempo auf " + promo.value + " WPM erhöht";
+      if (state.unlockedCount < KOCH_ORDER.length) {
+        nextCharHint = '<p class="hint">Erst sobald das Effektiv-Tempo ' + state.charSpeedWpm + ' WPM erreicht (aktuell ' + state.effWpm + '), wird "' + KOCH_ORDER[state.unlockedCount] + '" freigeschaltet.</p>';
+      }
+    } else if (promo.type === "unlock") {
+      action = "das nächste Zeichen (\"" + promo.value + "\") freigeschaltet";
+    } else {
+      action = "das Zeichen-Tempo auf " + promo.value + " WPM erhöht";
+    }
+    var n = state.recentBuffer.length;
+    var hits = state.recentBuffer.filter(Boolean).length;
+    var collecting = n < 20;
+    var barPct = collecting ? Math.round((n / 20) * 100) : Math.round((hits / n) * 100);
+    var label = collecting ? (n + " / 20 Versuche gesammelt") : (hits + " / " + n + " richtig (" + barPct + " %, Ziel 90 %)");
+    return (
+      '<p class="hint">Bei 90 % Trefferquote der letzten 20 Versuche wird bei aktuell ' +
+        state.charSpeedWpm + "/" + state.effWpm + " WPM (Zeichen/Effektiv) " + action + ".</p>" +
+      nextCharHint +
+      '<div class="promo-bar-wrap">' +
+        '<div class="promo-bar-label"><span>Fortschritt zur nächsten Freischaltung</span><strong class="mono">' + label + '</strong></div>' +
+        '<div class="promo-bar' + (collecting ? " counting" : "") + '">' +
+          '<div class="promo-bar-fill' + (!collecting && barPct >= 90 ? " hit" : "") + '" style="width:' + barPct + '%"></div>' +
+          (collecting ? "" : '<div class="promo-bar-goal"></div>') +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  // ---------- Persistence (localStorage; see README for the Hetzner-hosted plan) ----------
+  function loadProgress() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      var d = JSON.parse(raw);
+      if (typeof d.unlockedCount === "number") state.unlockedCount = d.unlockedCount;
+      if (typeof d.charSpeedWpm === "number") state.charSpeedWpm = d.charSpeedWpm;
+      if (typeof d.effWpm === "number") state.effWpm = d.effWpm;
+      if (typeof d.autoAdvance === "boolean") state.autoAdvance = d.autoAdvance;
+      if (typeof d.fixedGroups === "boolean") state.fixedGroups = d.fixedGroups;
+      if (d.charStats && typeof d.charStats === "object") state.charStats = d.charStats;
+      if (typeof d.totalReps === "number") state.totalReps = d.totalReps;
+      if (Array.isArray(d.sendWindow) && d.sendWindow.length) state.sendWindow = d.sendWindow;
+    } catch {}
+  }
+
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(doSave, 400);
+  }
+
+  function doSave() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        unlockedCount: state.unlockedCount,
+        charSpeedWpm: state.charSpeedWpm,
+        effWpm: state.effWpm,
+        autoAdvance: state.autoAdvance,
+        fixedGroups: state.fixedGroups,
+        charStats: state.charStats,
+        totalReps: state.totalReps,
+        sendWindow: state.sendWindow,
+        updatedAt: new Date().toISOString()
+      }));
+    } catch {}
+  }
+
+  // ---------- Audio ----------
+  var audioCtx = null;
+  var keyOsc = null, keyGain = null;
+
+  function ctx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+
+  function setLamp(on) {
+    var lamp = document.getElementById("lamp");
+    if (lamp) lamp.classList.toggle("on", on);
+  }
+
+  var currentPlayback = null;
+
+  function playText(text) {
+    return new Promise(function (resolve) {
+      var c = ctx();
+      var events = buildSchedule(text, timing());
+      var t = c.currentTime + 0.08;
+      var nodes = [];
+      var timers = [];
+      events.forEach(function (ev) {
+        if (ev.tone) {
+          var osc = c.createOscillator();
+          var gain = c.createGain();
+          osc.frequency.value = 620;
+          osc.type = "sine";
+          osc.connect(gain).connect(c.destination);
+          var dur = ev.ms / 1000;
+          var atk = Math.min(0.006, dur / 4);
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.28, t + atk);
+          gain.gain.setValueAtTime(0.28, t + Math.max(dur - atk, atk));
+          gain.gain.linearRampToValueAtTime(0, t + dur);
+          osc.start(t);
+          osc.stop(t + dur + 0.01);
+          nodes.push({ osc: osc, gain: gain });
+          var delayOn = Math.max(0, (t - c.currentTime) * 1000);
+          var delayOff = Math.max(0, (t + dur - c.currentTime) * 1000);
+          timers.push(setTimeout(function () { setLamp(true); }, delayOn));
+          timers.push(setTimeout(function () { setLamp(false); }, delayOff));
+        }
+        t += ev.ms / 1000;
+      });
+      var totalDelay = Math.max(0, (t - c.currentTime) * 1000);
+      timers.push(setTimeout(function () { setLamp(false); finish(); }, totalDelay + 20));
+
+      var finished = false;
+      function finish() {
+        if (finished) return;
+        finished = true;
+        if (currentPlayback === playback) currentPlayback = null;
+        resolve();
+      }
+
+      var playback = {
+        cancel: function () {
+          var now = c.currentTime;
+          nodes.forEach(function (n) {
+            try {
+              n.gain.gain.cancelScheduledValues(now);
+              n.gain.gain.setTargetAtTime(0, now, 0.004);
+              n.osc.stop(now + 0.03);
+            } catch {}
+          });
+          timers.forEach(clearTimeout);
+          setLamp(false);
+          finish();
+        }
+      };
+      currentPlayback = playback;
+    });
+  }
+
+  function cancelPlayback() {
+    if (currentPlayback) currentPlayback.cancel();
+  }
+
+  function ensureKeyOsc() {
+    if (keyOsc) return;
+    var c = ctx();
+    keyOsc = c.createOscillator();
+    keyGain = c.createGain();
+    keyOsc.frequency.value = 620;
+    keyOsc.type = "sine";
+    keyGain.gain.value = 0;
+    keyOsc.connect(keyGain).connect(c.destination);
+    keyOsc.start();
+  }
+
+  function keyToneOn() {
+    ensureKeyOsc();
+    var c = ctx();
+    keyGain.gain.cancelScheduledValues(c.currentTime);
+    keyGain.gain.linearRampToValueAtTime(0.28, c.currentTime + 0.004);
+    setLamp(true);
+  }
+
+  function keyToneOff() {
+    if (!keyGain) return;
+    var c = ctx();
+    keyGain.gain.cancelScheduledValues(c.currentTime);
+    keyGain.gain.linearRampToValueAtTime(0, c.currentTime + 0.004);
+    setLamp(false);
+  }
+
+  // ---------- UI shell ----------
+  var currentTab = "copy";
+  var screen = document.getElementById("screen");
+  var tabs = document.getElementById("tabs");
+
+  tabs.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-tab]");
+    if (!btn) return;
+    currentTab = btn.getAttribute("data-tab");
+    Array.prototype.forEach.call(tabs.querySelectorAll("button"), function (b) {
+      b.classList.toggle("active", b === btn);
+    });
+    render();
+  });
+
+  function refreshMeters() {
+    document.getElementById("mUnlocked").textContent = state.unlockedCount + " / " + KOCH_ORDER.length;
+    document.getElementById("mChar").innerHTML = state.charSpeedWpm + ' <small>WPM</small>';
+    document.getElementById("mEff").innerHTML = state.effWpm + ' <small>WPM</small>';
+    document.getElementById("mReps").textContent = state.totalReps;
+    renderCheatsheet();
+  }
+
+  function renderCheatsheet() {
+    var grid = document.getElementById("cheatGrid");
+    if (!grid) return;
+    var html = "";
+    unlockedChars().forEach(function (c) {
+      var s = state.charStats[c];
+      var isNew = !s || s.c < 8;
+      html += '<button type="button" class="cheat-tile' + (isNew ? " new" : "") + '" data-char="' + c + '">' +
+        '<span class="cheat-letter">' + c + '</span>' +
+        '<span class="cheat-pattern">' + toDots(MORSE[c]) + '</span>' +
+      '</button>';
+    });
+    html += '<button type="button" class="cheat-tile" data-char="KA">' +
+      '<span class="cheat-letter">KA</span>' +
+      '<span class="cheat-pattern">' + toDots(MORSE[PROSIGN_START]) + '</span>' +
+    '</button>';
+    html += '<button type="button" class="cheat-tile" data-char="AR">' +
+      '<span class="cheat-letter">AR</span>' +
+      '<span class="cheat-pattern">' + toDots(MORSE[PROSIGN_END]) + '</span>' +
+    '</button>';
+    grid.innerHTML = html;
+  }
+
+  function render() {
+    screen.innerHTML = "";
+    if (currentTab === "copy") renderCopy();
+    else if (currentTab === "send") renderSend();
+    else if (currentTab === "flash") renderFlash();
+    else renderProgress();
+  }
+
+  // ---------- Copy mode (Hören) ----------
+  var copyLine = [];
+
+  function newCopyLine() {
+    var groups = [];
+    var n = 5;
+    for (var i = 0; i < n; i++) groups.push(weightedGroup(state.fixedGroups ? 5 : 2 + Math.floor(Math.random() * 3)));
+    copyLine = groups;
+  }
+
+  function renderCopy() {
+    if (copyLine.length === 0) newCopyLine();
+    screen.innerHTML = "";
+    var box = document.createElement("div");
+    box.innerHTML =
+      '<p class="hint">Tipp direkt w&auml;hrend der Wiedergabe mit, Zeichen f&uuml;r Zeichen &ndash; du musst dir nichts merken. Enter oder Auswerten pr&uuml;ft den aktuellen Stand.</p>' +
+      '<div class="row">' +
+        '<button class="btn" id="playBtn">▶ Abspielen</button>' +
+        '<button class="btn secondary" id="replayBtn">↻ Wiederholen</button>' +
+        '<button class="btn secondary" id="cancelBtn" disabled>✕ Abbrechen</button>' +
+        '<button class="btn secondary" id="skipBtn">Nächste Zeile</button>' +
+      '</div>' +
+      '<div class="row"><input type="text" id="copyInput" placeholder="gehörte Zeichen…" autocomplete="off" spellcheck="false">' +
+        '<button class="btn secondary" id="submitBtn">Auswerten</button></div>' +
+      '<div class="diff" id="copyDiff"></div>';
+    screen.appendChild(box);
+
+    var input = box.querySelector("#copyInput");
+    var playBtn = box.querySelector("#playBtn");
+    var replayBtn = box.querySelector("#replayBtn");
+    var cancelBtn = box.querySelector("#cancelBtn");
+    var submitBtn = box.querySelector("#submitBtn");
+
+    function doPlay() {
+      playBtn.disabled = true;
+      replayBtn.disabled = true;
+      cancelBtn.disabled = false;
+      input.focus();
+      playText(PROSIGN_START + " " + copyLine.join(" ") + " " + PROSIGN_END).then(function () {
+        playBtn.disabled = false;
+        replayBtn.disabled = false;
+        cancelBtn.disabled = true;
+      });
+    }
+
+    box.querySelector("#playBtn").addEventListener("click", doPlay);
+    box.querySelector("#replayBtn").addEventListener("click", doPlay);
+    cancelBtn.addEventListener("click", cancelPlayback);
+    box.querySelector("#skipBtn").addEventListener("click", function () { newCopyLine(); renderCopy(); });
+    submitBtn.addEventListener("click", function () { evaluateCopy(input.value); });
+
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") evaluateCopy(input.value);
+    });
+  }
+
+  function evaluateCopy(typed) {
+    var input = document.getElementById("copyInput");
+    var submitBtn = document.getElementById("submitBtn");
+    if (!input || input.disabled) return;
+    input.disabled = true;
+    if (submitBtn) submitBtn.disabled = true;
+    var expected = copyLine.join("").toUpperCase();
+    var got = typed.toUpperCase().replace(/\s+/g, "");
+    var html = "";
+    var max = Math.max(expected.length, got.length);
+    for (var i = 0; i < max; i++) {
+      var e = expected[i], g = got[i];
+      if (e === undefined) continue;
+      var ok = g === e;
+      recordResult(e, ok);
+      refreshMeters();
+      scheduleSave();
+      html += '<span class="' + (ok ? "ok" : "no") + '">' + e + "</span>";
+    }
+    document.getElementById("copyDiff").innerHTML = html;
+    setTimeout(function () { newCopyLine(); renderCopy(); }, 1400);
+  }
+
+  // ---------- Send mode (Geben) ----------
+  var sendTarget = "";
+  var sendTyped = "";
+  var symbolBuffer = "";
+  var keyDownAt = null;
+  var charTimer = null;
+  var sendDebugLog = []; // newest first, capped - for diagnosing misreads live
+
+  function newSendTarget() {
+    sendTarget = weightedGroup(3 + Math.floor(Math.random() * 2));
+    sendTyped = "";
+    symbolBuffer = "";
+  }
+
+  function renderSend() {
+    if (!sendTarget) newSendTarget();
+    screen.innerHTML = "";
+    var box = document.createElement("div");
+    box.innerHTML =
+      '<p class="hint">Gib die angezeigten Zeichen per Taste: kurz drücken = Punkt, lang halten = Strich. Maus/Touch auf der Taste oder Leertaste auf der Tastatur.</p>' +
+      '<div class="target-display" id="sendTarget"></div>' +
+      '<button class="key-btn" id="keyBtn" tabindex="0">TASTE</button>' +
+      '<div class="row"><button class="btn secondary" id="newTargetBtn">Neue Gruppe</button>' +
+        '<button class="btn secondary" id="recalibrateBtn">Kalibrierung zurücksetzen</button></div>' +
+      '<div class="send-debug-list" id="sendDebugList"></div>';
+    screen.appendChild(box);
+    renderSendTarget();
+    renderSendDebugList();
+
+    var keyBtn = box.querySelector("#keyBtn");
+    // Pointer events (not mouse/touch) so setPointerCapture keeps the press
+    // "latched" to this element even if the cursor drifts off it mid-press -
+    // easy to trigger since the button visibly shrinks the instant you press
+    // it (.pressed { transform: scale(0.96) }), which used to cut dashes
+    // short via a premature mouseleave-as-mouseup.
+    function down(e) { e.preventDefault(); onKeyDown(); keyBtn.classList.add("pressed"); keyBtn.setPointerCapture(e.pointerId); }
+    function up(e) { e.preventDefault(); onKeyUp(); keyBtn.classList.remove("pressed"); }
+    keyBtn.addEventListener("pointerdown", down);
+    keyBtn.addEventListener("pointerup", up);
+    keyBtn.addEventListener("pointercancel", up);
+
+    box.querySelector("#recalibrateBtn").addEventListener("click", function () {
+      var seed = dotMs(state.charSpeedWpm);
+      state.sendWindow = [seed, seed * 3];
+      sendDebugLog = [];
+      scheduleSave();
+      renderSendDebugList();
+    });
+
+    box.querySelector("#newTargetBtn").addEventListener("click", function () { newSendTarget(); renderSend(); });
+  }
+
+  function spaceDown(e) {
+    if (e.code !== "Space" || currentTab !== "send" || e.repeat) return;
+    e.preventDefault();
+    onKeyDown();
+    var kb = document.getElementById("keyBtn");
+    if (kb) kb.classList.add("pressed");
+  }
+  function spaceUp(e) {
+    if (e.code !== "Space" || currentTab !== "send") return;
+    e.preventDefault();
+    onKeyUp();
+    var kb = document.getElementById("keyBtn");
+    if (kb) kb.classList.remove("pressed");
+  }
+
+  function onKeyDown() {
+    if (keyDownAt) return;
+    keyDownAt = performance.now();
+    clearTimeout(charTimer);
+    keyToneOn();
+  }
+
+  function onKeyUp() {
+    if (!keyDownAt) return;
+    var dur = performance.now() - keyDownAt;
+    keyDownAt = null;
+    keyToneOff();
+    var result = classifySendPress(state.sendWindow, dur);
+    state.sendWindow = result.window;
+    symbolBuffer += result.symbol;
+    scheduleSave();
+    clearTimeout(charTimer);
+    var dotEstimate = Math.min.apply(null, state.sendWindow);
+    var gap = sendLetterGapMs(dotEstimate);
+    charTimer = setTimeout(finalizeSendChar, gap);
+    logSendDebug("<div>" + Math.round(dur) + "ms → " + (result.symbol === "." ? "Punkt" : "Strich") +
+      " (Fenster: " + state.sendWindow.map(function (w) { return Math.round(w); }).join(",") +
+      "ms, Pause " + Math.round(gap) + "ms)</div>");
+  }
+
+  function logSendDebug(html) {
+    sendDebugLog.unshift(html);
+    if (sendDebugLog.length > 12) sendDebugLog.length = 12;
+    renderSendDebugList();
+  }
+
+  function renderSendDebugList() {
+    var el = document.getElementById("sendDebugList");
+    if (!el) return;
+    el.innerHTML = sendDebugLog.length ? sendDebugLog.join("") : "Noch keine Eingabe.";
+  }
+
+  function finalizeSendChar() {
+    if (!symbolBuffer) return;
+    var letter = REVERSE[symbolBuffer] || "?";
+    var expected = sendTarget[sendTyped.length];
+    var ok = letter === expected;
+    sendTyped += letter;
+    var pattern = symbolBuffer;
+    symbolBuffer = "";
+    renderSendTarget();
+    logSendDebug('<div class="' + (ok ? "letter-ok" : "letter-no") + '">→ "' + letter + '" (Puffer "' + pattern + '", erwartet "' + expected + '")</div>');
+    if (sendTyped.length >= sendTarget.length) {
+      setTimeout(function () { newSendTarget(); renderSend(); }, 1200);
+    }
+  }
+
+  function renderSendTarget() {
+    var el = document.getElementById("sendTarget");
+    if (!el) return;
+    var html = "";
+    for (var i = 0; i < sendTarget.length; i++) {
+      var cls = i < sendTyped.length ? (sendTyped[i] === sendTarget[i] ? "done" : "no") : (i === sendTyped.length ? "cursor" : "pending");
+      html += '<span class="' + cls + '">' + sendTarget[i] + "</span>";
+    }
+    el.innerHTML = html;
+  }
+
+  // ---------- Flashcards ----------
+  var flashChar = null;
+  var flashLocked = false;
+
+  function newFlash() {
+    flashChar = weightedChar();
+    flashLocked = false;
+  }
+
+  function renderFlash() {
+    if (!flashChar) newFlash();
+    screen.innerHTML = "";
+    var box = document.createElement("div");
+    box.innerHTML =
+      '<p class="hint">Hör das Zeichen und klick so schnell wie möglich den richtigen Buchstaben.</p>' +
+      '<div class="row"><button class="btn" id="flashPlay">▶ Zeichen abspielen</button></div>' +
+      '<div class="flash-grid" id="flashGrid"></div>';
+    screen.appendChild(box);
+
+    var grid = box.querySelector("#flashGrid");
+    unlockedChars().forEach(function (c) {
+      var b = document.createElement("button");
+      b.textContent = c;
+      b.addEventListener("click", function () { answerFlash(c, b); });
+      grid.appendChild(b);
+    });
+
+    box.querySelector("#flashPlay").addEventListener("click", function () {
+      playText(flashChar);
+    });
+  }
+
+  function answerFlash(picked, btnEl) {
+    if (flashLocked) return;
+    flashLocked = true;
+    var ok = picked === flashChar;
+    btnEl.classList.add(ok ? "correct" : "wrong");
+    if (!ok) {
+      Array.prototype.forEach.call(document.querySelectorAll("#flashGrid button"), function (b) {
+        if (b.textContent === flashChar) b.classList.add("correct");
+      });
+    }
+    setTimeout(function () { newFlash(); renderFlash(); }, 700);
+  }
+
+  // ---------- Progress ----------
+  function accuracyClass(c) {
+    var s = state.charStats[c];
+    if (!s || s.t < 3) return "";
+    var acc = s.c / s.t;
+    if (acc >= 0.9) return "good";
+    if (acc >= 0.7) return "mid";
+    return "bad";
+  }
+
+  function renderProgress() {
+    var box = document.createElement("div");
+    var overallCorrect = 0, overallTotal = 0;
+    Object.keys(state.charStats).forEach(function (c) {
+      overallCorrect += state.charStats[c].c;
+      overallTotal += state.charStats[c].t;
+    });
+    var overallAcc = overallTotal ? Math.round((overallCorrect / overallTotal) * 100) : 0;
+
+    box.innerHTML =
+      '<div class="stats-line">' +
+        '<span>Gesamt-Trefferquote: <strong>' + overallAcc + '%</strong></span>' +
+        '<span>Freigeschaltet: <strong>' + state.unlockedCount + ' / ' + KOCH_ORDER.length + '</strong></span>' +
+        '<span>Durchgänge: <strong>' + state.totalReps + '</strong></span>' +
+      '</div>' +
+      '<div class="char-grid" id="charGrid"></div>' +
+      '<fieldset>' +
+        '<legend>Einstellungen</legend>' +
+        '<div class="switch-row"><input type="checkbox" id="autoAdvance"> <label for="autoAdvance">Automatisch anpassen (Koch-Methode)</label></div>' +
+        '<div class="switch-row"><input type="checkbox" id="fixedGroups"> <label for="fixedGroups">Feste 5er-Gruppen beim H&ouml;ren</label></div>' +
+        '<label class="field">Zeichen-Tempo: <span class="mono" id="charSpeedOut"></span> WPM' +
+          '<input type="range" id="charSpeedSlider" min="10" max="35" step="1"></label>' +
+        '<label class="field">Effektiv-Tempo: <span class="mono" id="effSpeedOut"></span> WPM' +
+          '<input type="range" id="effSpeedSlider" min="3" max="35" step="1"></label>' +
+        '<div id="promotionBlock">' + promotionBlockHtml() + '</div>' +
+        '<div class="row"><button class="btn secondary" id="resetBtn">Fortschritt zurücksetzen</button></div>' +
+      '</fieldset>' +
+      '<p class="hint">Koch-Methode: Es wird bei zwei Zeichen mit zügigem Zeichen-Tempo, aber großem Abstand dazwischen begonnen. Sobald du über 90&nbsp;% Trefferquote erreichst, wird zuerst der Abstand verkürzt, dann ein neues Zeichen freigeschaltet.</p>';
+    screen.appendChild(box);
+
+    var grid = box.querySelector("#charGrid");
+    KOCH_ORDER.forEach(function (c, i) {
+      var locked = i >= state.unlockedCount;
+      var tile = document.createElement("div");
+      tile.className = "char-tile " + (locked ? "locked" : accuracyClass(c));
+      tile.textContent = c;
+      grid.appendChild(tile);
+    });
+
+    syncSettingsInputs();
+
+    box.querySelector("#autoAdvance").addEventListener("change", function (e) {
+      state.autoAdvance = e.target.checked;
+      box.querySelector("#promotionBlock").innerHTML = promotionBlockHtml();
+      scheduleSave();
+    });
+    box.querySelector("#fixedGroups").addEventListener("change", function (e) {
+      state.fixedGroups = e.target.checked;
+      scheduleSave();
+    });
+    box.querySelector("#charSpeedSlider").addEventListener("input", function (e) {
+      state.charSpeedWpm = parseInt(e.target.value, 10);
+      if (state.effWpm > state.charSpeedWpm) state.effWpm = state.charSpeedWpm;
+      box.querySelector("#charSpeedOut").textContent = state.charSpeedWpm;
+      box.querySelector("#effSpeedSlider").value = state.effWpm;
+      box.querySelector("#effSpeedOut").textContent = state.effWpm;
+      box.querySelector("#promotionBlock").innerHTML = promotionBlockHtml();
+      refreshMeters();
+      scheduleSave();
+    });
+    box.querySelector("#effSpeedSlider").addEventListener("input", function (e) {
+      state.effWpm = Math.min(parseInt(e.target.value, 10), state.charSpeedWpm);
+      box.querySelector("#effSpeedOut").textContent = state.effWpm;
+      box.querySelector("#promotionBlock").innerHTML = promotionBlockHtml();
+      refreshMeters();
+      scheduleSave();
+    });
+    box.querySelector("#resetBtn").addEventListener("click", function () {
+      state.unlockedCount = 2;
+      state.charSpeedWpm = 15;
+      state.effWpm = 5;
+      state.charStats = {};
+      state.totalReps = 0;
+      state.recentBuffer = [];
+      state.sendWindow = [dotMs(state.charSpeedWpm), dotMs(state.charSpeedWpm) * 3];
+      refreshMeters();
+      renderProgress();
+      scheduleSave();
+    });
+  }
+
+  function syncSettingsInputs() {
+    var a = document.getElementById("autoAdvance");
+    var cs = document.getElementById("charSpeedSlider");
+    var es = document.getElementById("effSpeedSlider");
+    if (!a) return;
+    a.checked = state.autoAdvance;
+    document.getElementById("fixedGroups").checked = state.fixedGroups;
+    cs.value = state.charSpeedWpm;
+    es.value = state.effWpm;
+    document.getElementById("charSpeedOut").textContent = state.charSpeedWpm;
+    document.getElementById("effSpeedOut").textContent = state.effWpm;
+  }
+
+  // ---------- Boot ----------
+  document.getElementById("cheatToggle").addEventListener("click", function () {
+    var panel = document.getElementById("cheatsheet");
+    panel.hidden = !panel.hidden;
+  });
+  document.getElementById("cheatGrid").addEventListener("click", function (e) {
+    var tile = e.target.closest(".cheat-tile");
+    if (!tile) return;
+    var c = tile.getAttribute("data-char");
+    if (c === "KA") playText(PROSIGN_START);
+    else if (c === "AR") playText(PROSIGN_END);
+    else playText(c);
+  });
+  window.addEventListener("keydown", spaceDown);
+  window.addEventListener("keyup", spaceUp);
+  loadProgress();
+  refreshMeters();
+  render();
+})();
+</script>
+</body>
+</html>

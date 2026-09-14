@@ -1,0 +1,13 @@
+{
+  "name": "cohrwurm",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.10.0",
+    "eslint-plugin-html": "^8.2.0"
+  }
+}
