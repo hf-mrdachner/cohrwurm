@@ -215,6 +215,55 @@
     letter-spacing: 0.05em;
   }
 
+  .ops-list { display: flex; flex-direction: column; gap: 4px; }
+  .ops-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+    padding: 7px 8px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .ops-row:hover { background: var(--panel-raised); }
+  .ops-row:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .ops-pattern {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    min-width: 92px;
+    flex: none;
+  }
+  .ops-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    min-width: 92px;
+    flex: none;
+  }
+  .ops-desc { color: var(--ink-dim); font-size: 13px; }
+
+  .explainer {
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    border-radius: 10px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .explainer-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .explainer-head h2 { font-size: 17px; color: var(--accent); }
+  .explainer-body { display: flex; flex-direction: column; gap: 10px; color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+  .explainer-body[hidden] { display: none; }
+  .explainer-body p { margin: 0; max-width: 68ch; }
+
   .screen {
     background: var(--screen);
     border: 1px solid var(--hair);
@@ -422,13 +471,32 @@
       <button data-tab="progress">Fortschritt</button>
     </nav>
     <button class="btn secondary cheat-toggle" id="cheatToggle">Spickzettel</button>
+    <button class="btn secondary cheat-toggle" id="opsToggle">Betriebszeichen</button>
   </div>
 
   <div class="cheatsheet" id="cheatsheet">
     <div class="cheat-grid" id="cheatGrid"></div>
   </div>
 
+  <div class="cheatsheet" id="opsPanel" hidden>
+    <div class="ops-list" id="opsList"></div>
+  </div>
+
   <section class="screen" id="screen"></section>
+
+  <section class="explainer" id="explainer">
+    <div class="explainer-head">
+      <h2>Wie funktioniert CohrWurm?</h2>
+      <button class="btn secondary" id="explainerToggle">Erklärung ausblenden</button>
+    </div>
+    <div class="explainer-body" id="explainerBody">
+      <p>CohrWurm ist ein Morsetrainer nach der <strong>Koch-Methode</strong>: Du hörst von Anfang an bei zügigem Tempo, statt einzelne Punkte und Striche langsam abzuzählen. Neue Zeichen kommen nach und nach dazu, sobald du die bisherigen sicher erkennst.</p>
+      <p>Die vier Anzeigen oben: <strong>Zeichen</strong> zeigt, wie viele der 40 Morse-Zeichen bereits freigeschaltet sind. <strong>Zeichen-Tempo</strong> ist das Tempo, mit dem einzelne Punkte/Striche gesendet werden, in <strong>WPM</strong> (Wörter pro Minute). <strong>Effektiv-Tempo</strong> ist das langsamere Tempo der Pausen zwischen den Zeichen – am Anfang bewusst groß, damit genug Zeit zum Erkennen bleibt, und wird erst nach und nach an das Zeichen-Tempo angeglichen. <strong>Durchgänge</strong> zählt, wie oft insgesamt schon ausgewertet wurde.</p>
+      <p>Die vier Reiter: <strong>Hören</strong> ist die Kernübung – du tippst live mit, während der Ton läuft, das ist auch der einzige Modus, der deinen Fortschritt und die automatische Freischaltung beeinflusst. <strong>Geben</strong> übt das Senden per Taste oder Leertaste. <strong>Flashcards</strong> zeigt ein einzelnes Zeichen zum Anklicken. <strong>Fortschritt</strong> zeigt Statistik und Einstellungen.</p>
+      <p><strong>Tipp:</strong> Beim Hören zählt Dranbleiben mehr als Richtigkeit. Tipp einfach weiter, auch wenn du ein Zeichen verpasst oder unsicher bist – wer anhält, um nachzudenken oder zu korrigieren, verpasst dadurch erst recht die nächsten Zeichen.</p>
+      <p>Beim Hören wird jede Zeile automatisch mit <strong>KA</strong> (Anfang) eingeleitet und mit <strong>AR</strong> (Ende) abgeschlossen – so wie im echten Amateurfunkbetrieb üblich. Diese und weitere Betriebszeichen (z.&nbsp;B. das Korrekturzeichen bei Verschreibern) findest du oben unter „Betriebszeichen“.</p>
+    </div>
+  </section>
 
   <footer class="note">Fortschritt wird lokal in diesem Browser gespeichert (localStorage).<br>73 de DA6CHI</footer>
 </div>
@@ -436,6 +504,7 @@
 <script type="module">
 import {
   MORSE, REVERSE, KOCH_ORDER, PROSIGN_START, PROSIGN_END,
+  PROSIGN_CORRECTION, PROSIGN_BT, PROSIGN_AS,
   state, timing, unlockedChars, weightedChar, weightedGroup,
   recordResult, nextPromotion, toDots, buildSchedule,
   classifySendPress, sendLetterGapMs, dotMs
@@ -449,7 +518,18 @@ import {
   // live in logic.mjs and are imported above; this file keeps
   // persistence, audio and UI/rendering.)
   var STORAGE_KEY = "cohrwurm-progress-v1";
+  var EXPLAINER_KEY = "cohrwurm-explainer-collapsed-v1";
   var saveTimer = null;
+
+  // Betriebszeichen: gebündelt für die "Betriebszeichen"-Liste (separat vom
+  // Spickzettel, s. renderCheatsheet) und deren Klick-zum-Abspielen-Handler.
+  var PROSIGNS = [
+    { char: "KA", pattern: MORSE[PROSIGN_START], sentinel: PROSIGN_START, label: "KA", desc: "Anfang: markiert den Beginn einer Übertragung." },
+    { char: "AR", pattern: MORSE[PROSIGN_END], sentinel: PROSIGN_END, label: "AR", desc: "Ende: markiert das Ende einer Übertragung/Nachricht." },
+    { char: "HH", pattern: MORSE[PROSIGN_CORRECTION], sentinel: PROSIGN_CORRECTION, label: "HH (Korrektur)", desc: "Fehler: sofort erneut senden, wenn man sich vertippt hat." },
+    { char: "BT", pattern: MORSE[PROSIGN_BT], sentinel: PROSIGN_BT, label: "BT", desc: "Trennung: trennt Gedankenabschnitte/Absätze." },
+    { char: "AS", pattern: MORSE[PROSIGN_AS], sentinel: PROSIGN_AS, label: "AS", desc: "Warten: bitte kurz warten." }
+  ];
 
   function promotionBlockHtml() {
     if (!state.autoAdvance) {
@@ -669,15 +749,21 @@ import {
         '<span class="cheat-pattern">' + toDots(MORSE[c]) + '</span>' +
       '</button>';
     });
-    html += '<button type="button" class="cheat-tile" data-char="KA">' +
-      '<span class="cheat-letter">KA</span>' +
-      '<span class="cheat-pattern">' + toDots(MORSE[PROSIGN_START]) + '</span>' +
-    '</button>';
-    html += '<button type="button" class="cheat-tile" data-char="AR">' +
-      '<span class="cheat-letter">AR</span>' +
-      '<span class="cheat-pattern">' + toDots(MORSE[PROSIGN_END]) + '</span>' +
-    '</button>';
     grid.innerHTML = html;
+  }
+
+  function renderOpsList() {
+    var list = document.getElementById("opsList");
+    if (!list) return;
+    var html = "";
+    PROSIGNS.forEach(function (p) {
+      html += '<button type="button" class="ops-row" data-char="' + p.char + '">' +
+        '<span class="ops-pattern">' + toDots(p.pattern) + '</span>' +
+        '<span class="ops-label">' + p.label + '</span>' +
+        '<span class="ops-desc">' + p.desc + '</span>' +
+      '</button>';
+    });
+    list.innerHTML = html;
   }
 
   function render() {
@@ -1046,6 +1132,19 @@ import {
     document.getElementById("effSpeedOut").textContent = state.effWpm;
   }
 
+  // ---------- Erklär-Block (Startseite) ----------
+  function loadExplainerCollapsed() {
+    try { return localStorage.getItem(EXPLAINER_KEY) === "1"; } catch { return false; }
+  }
+
+  function setExplainerCollapsed(collapsed) {
+    var body = document.getElementById("explainerBody");
+    var btn = document.getElementById("explainerToggle");
+    if (body) body.hidden = collapsed;
+    if (btn) btn.textContent = collapsed ? "Erklärung anzeigen" : "Erklärung ausblenden";
+    try { localStorage.setItem(EXPLAINER_KEY, collapsed ? "1" : "0"); } catch {}
+  }
+
   // ---------- Boot ----------
   document.getElementById("cheatToggle").addEventListener("click", function () {
     var panel = document.getElementById("cheatsheet");
@@ -1054,15 +1153,28 @@ import {
   document.getElementById("cheatGrid").addEventListener("click", function (e) {
     var tile = e.target.closest(".cheat-tile");
     if (!tile) return;
-    var c = tile.getAttribute("data-char");
-    if (c === "KA") playText(PROSIGN_START);
-    else if (c === "AR") playText(PROSIGN_END);
-    else playText(c);
+    playText(tile.getAttribute("data-char"));
+  });
+  document.getElementById("opsToggle").addEventListener("click", function () {
+    var panel = document.getElementById("opsPanel");
+    panel.hidden = !panel.hidden;
+  });
+  document.getElementById("opsList").addEventListener("click", function (e) {
+    var row = e.target.closest(".ops-row");
+    if (!row) return;
+    var c = row.getAttribute("data-char");
+    var prosign = PROSIGNS.filter(function (p) { return p.char === c; })[0];
+    if (prosign) playText(prosign.sentinel);
+  });
+  document.getElementById("explainerToggle").addEventListener("click", function () {
+    setExplainerCollapsed(!document.getElementById("explainerBody").hidden);
   });
   window.addEventListener("keydown", spaceDown);
   window.addEventListener("keyup", spaceUp);
   loadProgress();
   refreshMeters();
+  renderOpsList();
+  setExplainerCollapsed(loadExplainerCollapsed());
   render();
 })();
 </script>

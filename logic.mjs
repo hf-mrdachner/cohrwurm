@@ -19,6 +19,16 @@ export const PROSIGN_END = String.fromCharCode(2);
 MORSE[PROSIGN_START] = "-.-.-";
 MORSE[PROSIGN_END] = ".-.-.";
 
+// Weitere gebräuchliche Betriebszeichen, ebenfalls als fusionierte Sentinels
+// (kein Zwischenraum zwischen den Buchstaben, aus denen sie sich historisch
+// zusammensetzen): HH (Korrektur), BT (Trennung) und AS (Warten).
+export const PROSIGN_CORRECTION = String.fromCharCode(3);
+export const PROSIGN_BT = String.fromCharCode(4);
+export const PROSIGN_AS = String.fromCharCode(5);
+MORSE[PROSIGN_CORRECTION] = "........";
+MORSE[PROSIGN_BT] = "-...-";
+MORSE[PROSIGN_AS] = ".-...";
+
 export const KOCH_ORDER = ["K","M","U","R","S","A","P","T","L","O","W","I",".","N","J","E","F","0","Y",",",
                    "V","G","5","/","Q","9","Z","H","3","8","B","?","4","2","7","C","1","D","6","X"];
 
