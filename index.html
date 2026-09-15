@@ -438,7 +438,7 @@ import {
   MORSE, REVERSE, KOCH_ORDER, PROSIGN_START, PROSIGN_END,
   state, timing, unlockedChars, weightedChar, weightedGroup,
   recordResult, nextPromotion, toDots, buildSchedule,
-  classifySendPress, sendLetterGapMs, dotMs
+  classifySendPress, sendLetterGapMs, dotMs, alignCopyAttempt
 } from './logic.mjs';
 
 (function () {
@@ -710,7 +710,7 @@ import {
         '<button class="btn secondary" id="cancelBtn" disabled>✕ Abbrechen</button>' +
         '<button class="btn secondary" id="skipBtn">Nächste Zeile</button>' +
       '</div>' +
-      '<div class="row"><input type="text" id="copyInput" placeholder="gehörte Zeichen…" autocomplete="off" spellcheck="false">' +
+      '<div class="row"><input type="text" id="copyInput" placeholder="gehörte Zeichen…" autocomplete="off" spellcheck="false" maxlength="100">' +
         '<button class="btn secondary" id="submitBtn">Auswerten</button></div>' +
       '<div class="diff" id="copyDiff"></div>';
     screen.appendChild(box);
@@ -753,16 +753,12 @@ import {
     var expected = copyLine.join("").toUpperCase();
     var got = typed.toUpperCase().replace(/\s+/g, "");
     var html = "";
-    var max = Math.max(expected.length, got.length);
-    for (var i = 0; i < max; i++) {
-      var e = expected[i], g = got[i];
-      if (e === undefined) continue;
-      var ok = g === e;
-      recordResult(e, ok);
+    alignCopyAttempt(expected, got).forEach(function (item) {
+      recordResult(item.ch, item.ok);
       refreshMeters();
       scheduleSave();
-      html += '<span class="' + (ok ? "ok" : "no") + '">' + e + "</span>";
-    }
+      html += '<span class="' + (item.ok ? "ok" : "no") + '">' + item.ch + "</span>";
+    });
     document.getElementById("copyDiff").innerHTML = html;
     setTimeout(function () { newCopyLine(); renderCopy(); }, 1400);
   }
