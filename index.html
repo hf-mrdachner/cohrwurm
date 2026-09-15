@@ -776,12 +776,14 @@ import {
 
   // ---------- Copy mode (Hören) ----------
   var copyLine = [];
+  var copyLinePlayed = false;
 
   function newCopyLine() {
     var groups = [];
     var n = 5;
     for (var i = 0; i < n; i++) groups.push(weightedGroup(state.fixedGroups ? 5 : 2 + Math.floor(Math.random() * 3)));
     copyLine = groups;
+    copyLinePlayed = false;
   }
 
   function renderCopy() {
@@ -792,36 +794,40 @@ import {
       '<p class="hint">Tipp direkt w&auml;hrend der Wiedergabe mit, Zeichen f&uuml;r Zeichen &ndash; du musst dir nichts merken. Enter oder Auswerten pr&uuml;ft den aktuellen Stand.</p>' +
       '<div class="row">' +
         '<button class="btn" id="playBtn">▶ Abspielen</button>' +
-        '<button class="btn secondary" id="replayBtn">↻ Wiederholen</button>' +
         '<button class="btn secondary" id="cancelBtn" disabled>✕ Abbrechen</button>' +
-        '<button class="btn secondary" id="skipBtn">Nächste Zeile</button>' +
+        '<button class="btn secondary" id="skipBtn">Neue Zeichenfolge</button>' +
       '</div>' +
       '<div class="row"><input type="text" id="copyInput" placeholder="gehörte Zeichen…" autocomplete="off" spellcheck="false" maxlength="100">' +
-        '<button class="btn secondary" id="submitBtn">Auswerten</button></div>' +
+        '<button class="btn secondary" id="submitBtn" disabled>Auswerten</button></div>' +
       '<div class="diff" id="copyDiff"></div>';
     screen.appendChild(box);
 
     var input = box.querySelector("#copyInput");
     var playBtn = box.querySelector("#playBtn");
-    var replayBtn = box.querySelector("#replayBtn");
     var cancelBtn = box.querySelector("#cancelBtn");
     var submitBtn = box.querySelector("#submitBtn");
+    submitBtn.disabled = !copyLinePlayed;
 
     function doPlay() {
       playBtn.disabled = true;
-      replayBtn.disabled = true;
       cancelBtn.disabled = false;
+      copyLinePlayed = true;
+      submitBtn.disabled = false;
       input.focus();
       playText(PROSIGN_START + " " + copyLine.join(" ") + " " + PROSIGN_END).then(function () {
         playBtn.disabled = false;
-        replayBtn.disabled = false;
         cancelBtn.disabled = true;
       });
     }
 
     box.querySelector("#playBtn").addEventListener("click", doPlay);
-    box.querySelector("#replayBtn").addEventListener("click", doPlay);
-    cancelBtn.addEventListener("click", cancelPlayback);
+    cancelBtn.addEventListener("click", function () {
+      cancelPlayback();
+      if (!input.value.trim()) {
+        copyLinePlayed = false;
+        submitBtn.disabled = true;
+      }
+    });
     box.querySelector("#skipBtn").addEventListener("click", function () { newCopyLine(); renderCopy(); });
     submitBtn.addEventListener("click", function () { evaluateCopy(input.value); });
 
@@ -833,7 +839,7 @@ import {
   function evaluateCopy(typed) {
     var input = document.getElementById("copyInput");
     var submitBtn = document.getElementById("submitBtn");
-    if (!input || input.disabled) return;
+    if (!input || input.disabled || !copyLinePlayed) return;
     input.disabled = true;
     if (submitBtn) submitBtn.disabled = true;
     var expected = copyLine.join("").toUpperCase();
