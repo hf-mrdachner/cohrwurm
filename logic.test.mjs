@@ -1,6 +1,6 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { state, KOCH_ORDER, PROSIGN_START, dotMs, timing, unlockedChars, toDots, weightedChar, weightedGroup, recordResult, nextPromotion, buildSchedule, classifySendPress, sendLetterGapMs, alignCopyAttempt } from "./logic.mjs";
+import { state, KOCH_ORDER, MORSE, PROSIGN_START, PROSIGN_CORRECTION, PROSIGN_BT, PROSIGN_AS, dotMs, timing, unlockedChars, toDots, weightedChar, weightedGroup, recordResult, nextPromotion, buildSchedule, classifySendPress, sendLetterGapMs, alignCopyAttempt } from "./logic.mjs";
 
 function resetState() {
   state.unlockedCount = 2;
@@ -240,6 +240,25 @@ test("classifySendPress still adapts smoothly for a consistent slow learner (200
   const dashResult = classifySendPress(window, 600);
   assert.equal(dotResult.symbol, ".");
   assert.equal(dashResult.symbol, "-");
+});
+
+test("PROSIGN_CORRECTION/BT/AS map to their fused Morse patterns (Korrektur, Trennung, Warten)", () => {
+  assert.equal(MORSE[PROSIGN_CORRECTION], "........");
+  assert.equal(MORSE[PROSIGN_BT], "-...-");
+  assert.equal(MORSE[PROSIGN_AS], ".-...");
+});
+
+test("buildSchedule fuses the Korrektur prosign (8 dits) into one unbroken run, never charGap", () => {
+  assert.deepEqual(buildSchedule(PROSIGN_CORRECTION, T), [
+    { tone: true, ms: 60 }, { tone: false, ms: 60 },
+    { tone: true, ms: 60 }, { tone: false, ms: 60 },
+    { tone: true, ms: 60 }, { tone: false, ms: 60 },
+    { tone: true, ms: 60 }, { tone: false, ms: 60 },
+    { tone: true, ms: 60 }, { tone: false, ms: 60 },
+    { tone: true, ms: 60 }, { tone: false, ms: 60 },
+    { tone: true, ms: 60 }, { tone: false, ms: 60 },
+    { tone: true, ms: 60 }
+  ]);
 });
 
 test("alignCopyAttempt marks a perfect match entirely correct", () => {
