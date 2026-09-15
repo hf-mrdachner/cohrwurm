@@ -1,6 +1,6 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { state, KOCH_ORDER, MORSE, PROSIGN_START, PROSIGN_CORRECTION, PROSIGN_BT, PROSIGN_AS, dotMs, timing, unlockedChars, toDots, weightedChar, weightedGroup, recordResult, nextPromotion, buildSchedule, classifySendPress, sendLetterGapMs, alignCopyAttempt } from "./logic.mjs";
+import { state, KOCH_ORDER, MORSE, PROSIGN_START, PROSIGN_CORRECTION, PROSIGN_BT, PROSIGN_AS, dotMs, timing, unlockedChars, toDots, weightedChar, weightedGroup, recordResult, nextPromotion, PROMOTION_BUFFER_SIZE, charAccuracy, isCharSolid, buildSchedule, classifySendPress, sendLetterGapMs, alignCopyAttempt } from "./logic.mjs";
 
 function resetState() {
   state.unlockedCount = 2;
@@ -73,12 +73,29 @@ test("weightedGroup concatenates weightedChar() results to the requested length"
   assert.equal(weightedGroup(4), "KKKK");
 });
 
-test("recordResult updates charStats/totalReps and appends to recentBuffer, capped at 20", () => {
-  for (let i = 0; i < 25; i++) recordResult("K", i % 2 === 0);
-  assert.equal(state.charStats.K.t, 25);
-  assert.equal(state.charStats.K.c, 13);
-  assert.equal(state.totalReps, 25);
-  assert.equal(state.recentBuffer.length, 20);
+test("recordResult updates charStats/totalReps and appends to recentBuffer, capped at PROMOTION_BUFFER_SIZE", () => {
+  for (let i = 0; i < 35; i++) recordResult("K", i % 2 === 0);
+  assert.equal(state.charStats.K.t, 35);
+  assert.equal(state.charStats.K.c, 18);
+  assert.equal(state.totalReps, 35);
+  assert.equal(state.recentBuffer.length, PROMOTION_BUFFER_SIZE);
+});
+
+test("charAccuracy returns null before 3 attempts, then the hit ratio", () => {
+  assert.equal(charAccuracy("K"), null);
+  recordResult("K", true);
+  recordResult("K", true);
+  assert.equal(charAccuracy("K"), null);
+  recordResult("K", false);
+  assert.equal(charAccuracy("K"), 2 / 3);
+});
+
+test("isCharSolid requires at least 3 attempts and at least 90% accuracy", () => {
+  assert.equal(isCharSolid("K"), false);
+  for (let i = 0; i < 3; i++) recordResult("K", true);
+  assert.equal(isCharSolid("K"), true);
+  recordResult("K", false); // 3/4 = 75%
+  assert.equal(isCharSolid("K"), false);
 });
 
 test("nextPromotion proposes raising effWpm first when it lags charSpeedWpm", () => {
@@ -101,34 +118,46 @@ test("nextPromotion proposes raising charSpeedWpm, capped at 35, once every char
   assert.deepEqual(nextPromotion(), { type: "raiseSpeed", value: 35 });
 });
 
-test("maybePromote does nothing before 20 attempts are recorded", () => {
-  for (let i = 0; i < 19; i++) recordResult("K", true);
+test("maybePromote does nothing before PROMOTION_BUFFER_SIZE attempts are recorded", () => {
+  for (let i = 0; i < PROMOTION_BUFFER_SIZE - 1; i++) recordResult("K", true);
   assert.equal(state.unlockedCount, 2);
-  assert.equal(state.recentBuffer.length, 19);
+  assert.equal(state.recentBuffer.length, PROMOTION_BUFFER_SIZE - 1);
 });
 
-test("maybePromote applies the next promotion at >=90% over the last 20 attempts, and resets recentBuffer", () => {
+test("maybePromote applies the next promotion at >=90% over the recent buffer once the most recently unlocked char is solid, and resets recentBuffer", () => {
   state.charSpeedWpm = 20;
   state.effWpm = 20;
-  state.unlockedCount = 2;
-  for (let i = 0; i < 18; i++) recordResult("K", true);
+  state.unlockedCount = 2; // K, M unlocked; M is the most recently unlocked
+  for (let i = 0; i < 25; i++) recordResult("K", true);
   recordResult("K", false);
-  recordResult("K", true); // 19/20 = 95%, over threshold
+  recordResult("K", true);
+  for (let i = 0; i < 3; i++) recordResult("M", true); // proves M solid, 29/30 = 96.7% overall
   assert.equal(state.unlockedCount, 3);
   assert.equal(state.recentBuffer.length, 0);
 });
 
+test("maybePromote withholds unlocking the next character until the most recently unlocked one is solid, even at 100% overall", () => {
+  state.charSpeedWpm = 20;
+  state.effWpm = 20;
+  state.unlockedCount = 2; // K, M unlocked; M is the most recently unlocked but untested
+  for (let i = 0; i < PROMOTION_BUFFER_SIZE; i++) recordResult("K", true);
+  assert.equal(state.unlockedCount, 2);
+
+  for (let i = 0; i < 3; i++) recordResult("M", true); // M now solid
+  assert.equal(state.unlockedCount, 3);
+});
+
 test("maybePromote does not advance below the 90% threshold", () => {
   state.unlockedCount = 2;
-  for (let i = 0; i < 15; i++) recordResult("K", true);
-  for (let i = 0; i < 5; i++) recordResult("K", false); // 15/20 = 75%
+  for (let i = 0; i < 22; i++) recordResult("K", true);
+  for (let i = 0; i < 8; i++) recordResult("K", false); // 22/30 = 73.3%
   assert.equal(state.unlockedCount, 2);
-  assert.equal(state.recentBuffer.length, 20);
+  assert.equal(state.recentBuffer.length, PROMOTION_BUFFER_SIZE);
 });
 
 test("maybePromote does nothing when autoAdvance is disabled", () => {
   state.autoAdvance = false;
-  for (let i = 0; i < 25; i++) recordResult("K", true);
+  for (let i = 0; i < 35; i++) recordResult("K", true);
   assert.equal(state.unlockedCount, 2);
 });
 
