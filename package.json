@@ -1,6 +1,8 @@
 {
   "name": "cohrwurm",
   "private": true,
+  "license": "MIT",
+  "author": "Matthias Dachner (DA6CHI)",
   "scripts": {
     "test": "node --test",
     "lint": "eslint ."
