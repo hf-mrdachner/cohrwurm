@@ -1163,7 +1163,7 @@ import {
     var row = e.target.closest(".ops-row");
     if (!row) return;
     var c = row.getAttribute("data-char");
-    var prosign = PROSIGNS.filter(function (p) { return p.char === c; })[0];
+    var prosign = PROSIGNS.find(function (p) { return p.char === c; });
     if (prosign) playText(prosign.sentinel);
   });
   document.getElementById("explainerToggle").addEventListener("click", function () {
