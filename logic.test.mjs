@@ -1,6 +1,6 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { state, KOCH_ORDER, MORSE, PROSIGN_START, PROSIGN_CORRECTION, PROSIGN_BT, PROSIGN_AS, dotMs, timing, unlockedChars, toDots, weightedChar, weightedGroup, recordResult, nextPromotion, PROMOTION_BUFFER_SIZE, charAccuracy, isCharSolid, buildSchedule, classifySendPress, sendLetterGapMs, alignCopyAttempt } from "./logic.mjs";
+import { state, KOCH_ORDER, MORSE, PROSIGN_START, PROSIGN_CORRECTION, PROSIGN_BT, PROSIGN_AS, dotMs, timing, unlockedChars, toDots, weightedChar, weightedGroup, recordResult, nextPromotion, PROMOTION_BUFFER_SIZE, CHAR_SOLID_MIN_REPS, charAccuracy, isCharSolid, unlockBlockedBy, buildSchedule, classifySendPress, sendLetterGapMs, alignCopyAttempt } from "./logic.mjs";
 
 function resetState() {
   state.unlockedCount = 2;
@@ -81,21 +81,27 @@ test("recordResult updates charStats/totalReps and appends to recentBuffer, capp
   assert.equal(state.recentBuffer.length, PROMOTION_BUFFER_SIZE);
 });
 
-test("charAccuracy returns null before 3 attempts, then the hit ratio", () => {
+test("charAccuracy returns null before CHAR_SOLID_MIN_REPS attempts, then the hit ratio", () => {
   assert.equal(charAccuracy("K"), null);
-  recordResult("K", true);
-  recordResult("K", true);
+  for (let i = 0; i < CHAR_SOLID_MIN_REPS - 1; i++) recordResult("K", true);
   assert.equal(charAccuracy("K"), null);
   recordResult("K", false);
-  assert.equal(charAccuracy("K"), 2 / 3);
+  assert.equal(charAccuracy("K"), (CHAR_SOLID_MIN_REPS - 1) / CHAR_SOLID_MIN_REPS);
 });
 
-test("isCharSolid requires at least 3 attempts and at least 90% accuracy", () => {
+test("isCharSolid requires at least CHAR_SOLID_MIN_REPS attempts and at least 90% accuracy", () => {
   assert.equal(isCharSolid("K"), false);
-  for (let i = 0; i < 3; i++) recordResult("K", true);
+  for (let i = 0; i < CHAR_SOLID_MIN_REPS; i++) recordResult("K", true);
   assert.equal(isCharSolid("K"), true);
-  recordResult("K", false); // 3/4 = 75%
+  recordResult("K", false); // ratio drops below 90%
   assert.equal(isCharSolid("K"), false);
+});
+
+test("unlockBlockedBy names the most recently unlocked character until it's solid, then returns null", () => {
+  state.unlockedCount = 2; // K, M unlocked; M is the most recently unlocked
+  assert.equal(unlockBlockedBy(), "M");
+  for (let i = 0; i < CHAR_SOLID_MIN_REPS; i++) recordResult("M", true);
+  assert.equal(unlockBlockedBy(), null);
 });
 
 test("nextPromotion proposes raising effWpm first when it lags charSpeedWpm", () => {
@@ -131,7 +137,7 @@ test("maybePromote applies the next promotion at >=90% over the recent buffer on
   for (let i = 0; i < 25; i++) recordResult("K", true);
   recordResult("K", false);
   recordResult("K", true);
-  for (let i = 0; i < 3; i++) recordResult("M", true); // proves M solid, 29/30 = 96.7% overall
+  for (let i = 0; i < CHAR_SOLID_MIN_REPS; i++) recordResult("M", true); // proves M solid
   assert.equal(state.unlockedCount, 3);
   assert.equal(state.recentBuffer.length, 0);
 });
@@ -143,7 +149,7 @@ test("maybePromote withholds unlocking the next character until the most recentl
   for (let i = 0; i < PROMOTION_BUFFER_SIZE; i++) recordResult("K", true);
   assert.equal(state.unlockedCount, 2);
 
-  for (let i = 0; i < 3; i++) recordResult("M", true); // M now solid
+  for (let i = 0; i < CHAR_SOLID_MIN_REPS; i++) recordResult("M", true); // M now solid
   assert.equal(state.unlockedCount, 3);
 });
 

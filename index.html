@@ -508,7 +508,7 @@ import {
   state, timing, unlockedChars, weightedChar, weightedGroup,
   recordResult, nextPromotion, toDots, buildSchedule,
   classifySendPress, sendLetterGapMs, dotMs, alignCopyAttempt,
-  charAccuracy, isCharSolid, PROMOTION_BUFFER_SIZE
+  charAccuracy, unlockBlockedBy, PROMOTION_BUFFER_SIZE
 } from './logic.mjs';
 
 (function () {
@@ -546,9 +546,9 @@ import {
       }
     } else if (promo.type === "unlock") {
       action = "das nächste Zeichen (\"" + promo.value + "\") freigeschaltet";
-      var lastChar = KOCH_ORDER[state.unlockedCount - 1];
-      if (!isCharSolid(lastChar)) {
-        nextCharHint = '<p class="hint">Vorher muss "' + lastChar + '" in der Übersicht unten grün (sicher) stehen.</p>';
+      var blockedChar = unlockBlockedBy();
+      if (blockedChar) {
+        nextCharHint = '<p class="hint">Vorher muss "' + blockedChar + '" in der Übersicht unten grün (sicher) stehen.</p>';
       }
     } else {
       action = "das Zeichen-Tempo auf " + promo.value + " WPM erhöht";

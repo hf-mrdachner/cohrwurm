@@ -125,8 +125,8 @@ export function weightedGroup(len) {
 }
 
 export var PROMOTION_BUFFER_SIZE = 30;
-var CHAR_SOLID_MIN_REPS = 3;
-var CHAR_SOLID_ACC = 0.9;
+export var CHAR_SOLID_MIN_REPS = 5;
+export var CHAR_SOLID_ACC = 0.9;
 
 export function charAccuracy(c) {
   var s = state.charStats[c];
@@ -137,6 +137,14 @@ export function charAccuracy(c) {
 export function isCharSolid(c) {
   var acc = charAccuracy(c);
   return acc !== null && acc >= CHAR_SOLID_ACC;
+}
+
+// Names the most recently unlocked character while it still isn't solid -
+// used to gate unlocking the next one, and to explain the wait in the UI.
+export function unlockBlockedBy() {
+  if (state.unlockedCount === 0) return null;
+  var lastChar = KOCH_ORDER[state.unlockedCount - 1];
+  return isCharSolid(lastChar) ? null : lastChar;
 }
 
 export function recordResult(ch, correct) {
@@ -165,7 +173,7 @@ export function maybePromote() {
   var hits = state.recentBuffer.filter(Boolean).length;
   if (hits / state.recentBuffer.length < 0.9) return;
   var promo = nextPromotion();
-  if (promo.type === "unlock" && !isCharSolid(KOCH_ORDER[state.unlockedCount - 1])) {
+  if (promo.type === "unlock" && unlockBlockedBy()) {
     return; // most recently unlocked char isn't proven yet - keep practicing before adding another
   }
   if (promo.type === "raiseEff") state.effWpm = promo.value;
