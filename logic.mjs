@@ -156,6 +156,47 @@ export function maybePromote() {
   state.recentBuffer = [];
 }
 
+// Aligns a learner's typed Copy-mode attempt against the expected text via
+// edit-distance backtrace (Levenshtein alignment), instead of comparing
+// index-for-index. A plain positional compare treats one missed/skipped
+// character as a permanent one-position shift, marking every following
+// character wrong even though the learner typed the rest correctly. This
+// aligns matches/substitutions diagonally and charges only the
+// missed/extra characters themselves, so one skip no longer cascades.
+export function alignCopyAttempt(expected, got) {
+  var n = expected.length, m = got.length;
+  var dp = [];
+  var row, col;
+  for (row = 0; row <= n; row++) dp.push(new Array(m + 1).fill(0));
+  for (row = 1; row <= n; row++) dp[row][0] = row;
+  for (col = 1; col <= m; col++) dp[0][col] = col;
+  for (row = 1; row <= n; row++) {
+    for (col = 1; col <= m; col++) {
+      var subCost = expected[row - 1] === got[col - 1] ? 0 : 1;
+      dp[row][col] = Math.min(
+        dp[row - 1][col - 1] + subCost, // match/substitute
+        dp[row - 1][col] + 1,           // deletion: expected char missing from got
+        dp[row][col - 1] + 1            // insertion: extra typed char
+      );
+    }
+  }
+  var result = [];
+  row = n; col = m;
+  while (row > 0 || col > 0) {
+    if (row > 0 && col > 0 && dp[row][col] === dp[row - 1][col - 1] + (expected[row - 1] === got[col - 1] ? 0 : 1)) {
+      result.push({ ch: expected[row - 1], ok: expected[row - 1] === got[col - 1] });
+      row--; col--;
+    } else if (row > 0 && dp[row][col] === dp[row - 1][col] + 1) {
+      result.push({ ch: expected[row - 1], ok: false }); // deletion: nothing to charge it against
+      row--;
+    } else {
+      col--; // insertion: extra typed char, doesn't correspond to any expected one
+    }
+  }
+  result.reverse();
+  return result;
+}
+
 export function buildSchedule(text, t) {
   var seq = text.toUpperCase().split("");
   var events = [];

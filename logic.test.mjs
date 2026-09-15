@@ -1,6 +1,6 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { state, KOCH_ORDER, MORSE, PROSIGN_START, PROSIGN_CORRECTION, PROSIGN_BT, PROSIGN_AS, dotMs, timing, unlockedChars, toDots, weightedChar, weightedGroup, recordResult, nextPromotion, buildSchedule, classifySendPress, sendLetterGapMs } from "./logic.mjs";
+import { state, KOCH_ORDER, MORSE, PROSIGN_START, PROSIGN_CORRECTION, PROSIGN_BT, PROSIGN_AS, dotMs, timing, unlockedChars, toDots, weightedChar, weightedGroup, recordResult, nextPromotion, buildSchedule, classifySendPress, sendLetterGapMs, alignCopyAttempt } from "./logic.mjs";
 
 function resetState() {
   state.unlockedCount = 2;
@@ -258,6 +258,62 @@ test("buildSchedule fuses the Korrektur prosign (8 dits) into one unbroken run, 
     { tone: true, ms: 60 }, { tone: false, ms: 60 },
     { tone: true, ms: 60 }, { tone: false, ms: 60 },
     { tone: true, ms: 60 }
+  ]);
+});
+
+test("alignCopyAttempt marks a perfect match entirely correct", () => {
+  assert.deepEqual(alignCopyAttempt("SEND", "SEND"), [
+    { ch: "S", ok: true }, { ch: "E", ok: true }, { ch: "N", ok: true }, { ch: "D", ok: true }
+  ]);
+});
+
+test("alignCopyAttempt charges only the missed character, not everything after it (the #1 regression)", () => {
+  // Learner missed the E while copying live and kept going, per the app's own
+  // advice to not stop for a missed character - the rest was typed correctly.
+  assert.deepEqual(alignCopyAttempt("SEND", "SND"), [
+    { ch: "S", ok: true }, { ch: "E", ok: false }, { ch: "N", ok: true }, { ch: "D", ok: true }
+  ]);
+});
+
+test("alignCopyAttempt still marks a true substitution wrong at its own position", () => {
+  assert.deepEqual(alignCopyAttempt("SEND", "SAND"), [
+    { ch: "S", ok: true }, { ch: "E", ok: false }, { ch: "N", ok: true }, { ch: "D", ok: true }
+  ]);
+});
+
+test("alignCopyAttempt ignores an extra inserted character rather than shifting the rest wrong", () => {
+  assert.deepEqual(alignCopyAttempt("SEND", "SEXND"), [
+    { ch: "S", ok: true }, { ch: "E", ok: true }, { ch: "N", ok: true }, { ch: "D", ok: true }
+  ]);
+});
+
+test("alignCopyAttempt charges every expected character wrong for an empty attempt", () => {
+  assert.deepEqual(alignCopyAttempt("HI", ""), [
+    { ch: "H", ok: false }, { ch: "I", ok: false }
+  ]);
+});
+
+test("alignCopyAttempt charges two separate missed characters without shifting anything between them", () => {
+  // MORSE typed as MRE - missed the O and the S, kept the rest correct.
+  assert.deepEqual(alignCopyAttempt("MORSE", "MRE"), [
+    { ch: "M", ok: true }, { ch: "O", ok: false }, { ch: "R", ok: true },
+    { ch: "S", ok: false }, { ch: "E", ok: true }
+  ]);
+});
+
+test("alignCopyAttempt ignores two separate extra inserted characters", () => {
+  // CODE typed as COXDEY - stray X and Y typed in, rest correct.
+  assert.deepEqual(alignCopyAttempt("CODE", "COXDEY"), [
+    { ch: "C", ok: true }, { ch: "O", ok: true }, { ch: "D", ok: true }, { ch: "E", ok: true }
+  ]);
+});
+
+test("alignCopyAttempt handles a missed character and an unrelated extra character together", () => {
+  // PARIS typed as PRISZ - missed the A, and a stray Z typed at the end;
+  // far enough apart that it can't be read as a single substitution.
+  assert.deepEqual(alignCopyAttempt("PARIS", "PRISZ"), [
+    { ch: "P", ok: true }, { ch: "A", ok: false }, { ch: "R", ok: true },
+    { ch: "I", ok: true }, { ch: "S", ok: true }
   ]);
 });
 
