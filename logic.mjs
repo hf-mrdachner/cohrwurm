@@ -124,13 +124,36 @@ export function weightedGroup(len) {
   return out;
 }
 
+export var PROMOTION_BUFFER_SIZE = 30;
+export var CHAR_SOLID_MIN_REPS = 5;
+export var CHAR_SOLID_ACC = 0.9;
+
+export function charAccuracy(c) {
+  var s = state.charStats[c];
+  if (!s || s.t < CHAR_SOLID_MIN_REPS) return null;
+  return s.c / s.t;
+}
+
+export function isCharSolid(c) {
+  var acc = charAccuracy(c);
+  return acc !== null && acc >= CHAR_SOLID_ACC;
+}
+
+// Names the most recently unlocked character while it still isn't solid -
+// used to gate unlocking the next one, and to explain the wait in the UI.
+export function unlockBlockedBy() {
+  if (state.unlockedCount === 0) return null;
+  var lastChar = KOCH_ORDER[state.unlockedCount - 1];
+  return isCharSolid(lastChar) ? null : lastChar;
+}
+
 export function recordResult(ch, correct) {
   if (!state.charStats[ch]) state.charStats[ch] = { c: 0, t: 0 };
   state.charStats[ch].t++;
   if (correct) state.charStats[ch].c++;
   state.totalReps++;
   state.recentBuffer.push(correct);
-  if (state.recentBuffer.length > 20) state.recentBuffer.shift();
+  if (state.recentBuffer.length > PROMOTION_BUFFER_SIZE) state.recentBuffer.shift();
   maybePromote();
 }
 
@@ -146,10 +169,13 @@ export function nextPromotion() {
 
 export function maybePromote() {
   if (!state.autoAdvance) return;
-  if (state.recentBuffer.length < 20) return;
+  if (state.recentBuffer.length < PROMOTION_BUFFER_SIZE) return;
   var hits = state.recentBuffer.filter(Boolean).length;
   if (hits / state.recentBuffer.length < 0.9) return;
   var promo = nextPromotion();
+  if (promo.type === "unlock" && unlockBlockedBy()) {
+    return; // most recently unlocked char isn't proven yet - keep practicing before adding another
+  }
   if (promo.type === "raiseEff") state.effWpm = promo.value;
   else if (promo.type === "unlock") state.unlockedCount++;
   else state.charSpeedWpm = promo.value;

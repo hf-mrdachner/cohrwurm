@@ -507,7 +507,8 @@ import {
   PROSIGN_CORRECTION, PROSIGN_BT, PROSIGN_AS,
   state, timing, unlockedChars, weightedChar, weightedGroup,
   recordResult, nextPromotion, toDots, buildSchedule,
-  classifySendPress, sendLetterGapMs, dotMs, alignCopyAttempt
+  classifySendPress, sendLetterGapMs, dotMs, alignCopyAttempt,
+  charAccuracy, unlockBlockedBy, PROMOTION_BUFFER_SIZE
 } from './logic.mjs';
 
 (function () {
@@ -545,16 +546,20 @@ import {
       }
     } else if (promo.type === "unlock") {
       action = "das nächste Zeichen (\"" + promo.value + "\") freigeschaltet";
+      var blockedChar = unlockBlockedBy();
+      if (blockedChar) {
+        nextCharHint = '<p class="hint">Vorher muss "' + blockedChar + '" in der Übersicht unten grün (sicher) stehen.</p>';
+      }
     } else {
       action = "das Zeichen-Tempo auf " + promo.value + " WPM erhöht";
     }
     var n = state.recentBuffer.length;
     var hits = state.recentBuffer.filter(Boolean).length;
-    var collecting = n < 20;
-    var barPct = collecting ? Math.round((n / 20) * 100) : Math.round((hits / n) * 100);
-    var label = collecting ? (n + " / 20 Versuche gesammelt") : (hits + " / " + n + " richtig (" + barPct + " %, Ziel 90 %)");
+    var collecting = n < PROMOTION_BUFFER_SIZE;
+    var barPct = collecting ? Math.round((n / PROMOTION_BUFFER_SIZE) * 100) : Math.round((hits / n) * 100);
+    var label = collecting ? (n + " / " + PROMOTION_BUFFER_SIZE + " Versuche gesammelt") : (hits + " / " + n + " richtig (" + barPct + " %, Ziel 90 %)");
     return (
-      '<p class="hint">Bei 90 % Trefferquote der letzten 20 Versuche wird bei aktuell ' +
+      '<p class="hint">Bei 90 % Trefferquote der letzten ' + PROMOTION_BUFFER_SIZE + ' Versuche wird bei aktuell ' +
         state.charSpeedWpm + "/" + state.effWpm + " WPM (Zeichen/Effektiv) " + action + ".</p>" +
       nextCharHint +
       '<div class="promo-bar-wrap">' +
@@ -1032,12 +1037,18 @@ import {
 
   // ---------- Progress ----------
   function accuracyClass(c) {
-    var s = state.charStats[c];
-    if (!s || s.t < 3) return "";
-    var acc = s.c / s.t;
+    var acc = charAccuracy(c);
+    if (acc === null) return "";
     if (acc >= 0.9) return "good";
     if (acc >= 0.7) return "mid";
     return "bad";
+  }
+
+  function tileAccuracyTitle(c) {
+    var s = state.charStats[c];
+    if (!s || s.t === 0) return c + ": noch keine Versuche";
+    var pct = Math.round((s.c / s.t) * 100);
+    return c + ": " + pct + " % (" + s.c + "/" + s.t + ")";
   }
 
   function renderProgress() {
@@ -1067,7 +1078,7 @@ import {
         '<div id="promotionBlock">' + promotionBlockHtml() + '</div>' +
         '<div class="row"><button class="btn secondary" id="resetBtn">Fortschritt zurücksetzen</button></div>' +
       '</fieldset>' +
-      '<p class="hint">Koch-Methode: Es wird bei zwei Zeichen mit zügigem Zeichen-Tempo, aber großem Abstand dazwischen begonnen. Sobald du über 90&nbsp;% Trefferquote erreichst, wird zuerst der Abstand verkürzt, dann ein neues Zeichen freigeschaltet.</p>';
+      '<p class="hint">Koch-Methode: Es wird bei zwei Zeichen mit zügigem Zeichen-Tempo, aber großem Abstand dazwischen begonnen. Sobald du über 90&nbsp;% Trefferquote erreichst, wird zuerst der Abstand verkürzt, dann ein neues Zeichen freigeschaltet – aber erst, wenn das zuletzt freigeschaltete Zeichen selbst schon grün (sicher) ist.</p>';
     screen.appendChild(box);
 
     var grid = box.querySelector("#charGrid");
@@ -1076,6 +1087,7 @@ import {
       var tile = document.createElement("div");
       tile.className = "char-tile " + (locked ? "locked" : accuracyClass(c));
       tile.textContent = c;
+      if (!locked) tile.title = tileAccuracyTitle(c);
       grid.appendChild(tile);
     });
 
