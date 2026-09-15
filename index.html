@@ -821,7 +821,13 @@ import {
     }
 
     box.querySelector("#playBtn").addEventListener("click", doPlay);
-    cancelBtn.addEventListener("click", cancelPlayback);
+    cancelBtn.addEventListener("click", function () {
+      cancelPlayback();
+      if (!input.value.trim()) {
+        copyLinePlayed = false;
+        submitBtn.disabled = true;
+      }
+    });
     box.querySelector("#skipBtn").addEventListener("click", function () { newCopyLine(); renderCopy(); });
     submitBtn.addEventListener("click", function () { evaluateCopy(input.value); });
 
