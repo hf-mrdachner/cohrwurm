@@ -1,6 +1,6 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { state, KOCH_ORDER, MORSE, PROSIGN_START, PROSIGN_CORRECTION, PROSIGN_BT, PROSIGN_AS, dotMs, timing, unlockedChars, toDots, weightedChar, weightedGroup, recordResult, nextPromotion, PROMOTION_BUFFER_SIZE, CHAR_SOLID_MIN_REPS, EFF_WPM_MIN, charAccuracy, isCharSolid, unlockBlockedBy, buildSchedule, classifySendPress, sendLetterGapMs, alignCopyAttempt } from "./logic.mjs";
+import { state, KOCH_ORDER, MORSE, PROSIGN_START, PROSIGN_CORRECTION, PROSIGN_BT, PROSIGN_AS, dotMs, timing, unlockedChars, toDots, weightedChar, weightedGroup, recordResult, nextPromotion, PROMOTION_BUFFER_SIZE, CHAR_SOLID_MIN_REPS, EFF_WPM_MIN, effAfterUnlockDrop, charAccuracy, isCharSolid, unlockBlockedBy, buildSchedule, classifySendPress, sendLetterGapMs, alignCopyAttempt } from "./logic.mjs";
 
 function resetState() {
   state.unlockedCount = 2;
@@ -143,6 +143,14 @@ test("maybePromote applies the next promotion at >=90% over the recent buffer on
   assert.equal(state.recentBuffer.length, 0);
 });
 
+test("effAfterUnlockDrop subtracts the drop from the current effWpm", () => {
+  assert.equal(effAfterUnlockDrop(20, 5), 15);
+});
+
+test("effAfterUnlockDrop clamps at EFF_WPM_MIN, never dropping below it", () => {
+  assert.equal(effAfterUnlockDrop(5, 100), EFF_WPM_MIN);
+});
+
 test("maybePromote drops effWpm back by effDropOnUnlock when unlocking a new character", () => {
   state.charSpeedWpm = 20;
   state.effWpm = 20;
@@ -182,12 +190,22 @@ test("maybePromote leaves effWpm unchanged on unlock when effDropOnUnlock is 0",
   assert.equal(state.effWpm, 20);
 });
 
-test("maybePromote does not drop effWpm on a raiseEff or raiseSpeed promotion, only on unlock", () => {
+test("maybePromote does not drop effWpm on a raiseEff promotion, only on unlock", () => {
   state.charSpeedWpm = 20;
   state.effWpm = 10;
   state.effDropOnUnlock = 5;
   for (let i = 0; i < PROMOTION_BUFFER_SIZE; i++) recordResult("K", true);
   assert.equal(state.effWpm, 11); // raiseEff, unaffected by effDropOnUnlock
+});
+
+test("maybePromote does not drop effWpm on a raiseSpeed promotion, only on unlock", () => {
+  state.charSpeedWpm = 20;
+  state.effWpm = 20;
+  state.effDropOnUnlock = 5;
+  state.unlockedCount = KOCH_ORDER.length;
+  for (let i = 0; i < PROMOTION_BUFFER_SIZE; i++) recordResult("K", true);
+  assert.equal(state.charSpeedWpm, 21);
+  assert.equal(state.effWpm, 20); // raiseSpeed, unaffected by effDropOnUnlock
 });
 
 test("maybePromote withholds unlocking the next character until the most recently unlocked one is solid, even at 100% overall", () => {

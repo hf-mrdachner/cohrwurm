@@ -508,7 +508,7 @@ import {
   state, timing, unlockedChars, weightedChar, weightedGroup,
   recordResult, nextPromotion, toDots, buildSchedule,
   classifySendPress, sendLetterGapMs, dotMs, alignCopyAttempt,
-  charAccuracy, unlockBlockedBy, PROMOTION_BUFFER_SIZE, EFF_WPM_MIN
+  charAccuracy, unlockBlockedBy, PROMOTION_BUFFER_SIZE, effAfterUnlockDrop
 } from './logic.mjs';
 
 (function () {
@@ -547,7 +547,7 @@ import {
     } else if (promo.type === "unlock") {
       action = "das nächste Zeichen (\"" + promo.value + "\") freigeschaltet";
       if (state.effDropOnUnlock > 0) {
-        var afterDrop = Math.max(EFF_WPM_MIN, state.effWpm - state.effDropOnUnlock);
+        var afterDrop = effAfterUnlockDrop(state.effWpm, state.effDropOnUnlock);
         action += " (Effektiv-Tempo geht dabei zurück auf " + afterDrop + " WPM)";
       }
       var blockedChar = unlockBlockedBy();
@@ -1082,7 +1082,7 @@ import {
         '<p class="hint">Das Zeichen-Tempo ist dein eigentliches Lernziel – so schnell werden Punkt/Strich innerhalb eines Buchstabens tatsächlich gesendet. Es sollte nicht unter 10&nbsp;WPM fallen, sonst gewöhnt man sich ans Abzählen statt ans Hören. Grobe, unverbindliche Richtwerte: 12&nbsp;WPM = gemächlich, 15&nbsp;WPM = solider Standard, 20&nbsp;WPM = zügig, wie im echten Amateurfunkverkehr.</p>' +
         '<label class="field">Effektiv-Tempo: <span class="mono" id="effSpeedOut"></span> WPM' +
           '<input type="range" id="effSpeedSlider" min="3" max="35" step="1"></label>' +
-        '<p class="hint">Das Effektiv-Tempo bestimmt nur die Pausen zwischen den Zeichen und nähert sich bei genug Trefferquote Schritt für Schritt dem Zeichen-Tempo an. Ein neues Zeichen wird erst freigeschaltet, wenn das Effektiv-Tempo das Zeichen-Tempo erreicht hat.</p>' +
+        '<p class="hint">Das Effektiv-Tempo bestimmt nur die Pausen zwischen den Zeichen und nähert sich bei genug Trefferquote Schritt für Schritt dem Zeichen-Tempo an. Ein neues Zeichen wird erst freigeschaltet, wenn zusätzlich das Effektiv-Tempo das Zeichen-Tempo erreicht und das zuletzt freigeschaltete Zeichen sicher sitzt.</p>' +
         '<label class="field">Rücksprung bei neuem Zeichen: <span class="mono" id="effDropOut"></span> WPM' +
           '<input type="range" id="effDropSlider" min="0" max="10" step="1"></label>' +
         '<p class="hint">Sobald ein neues Zeichen freigeschaltet wird, sinkt das Effektiv-Tempo um diesen Wert wieder ab – das gibt mehr Zeit, sich auf den neuen Buchstaben einzustellen, bevor wieder hochtrainiert wird. 0 = kein Rücksprung.</p>' +
@@ -1145,7 +1145,7 @@ import {
       state.recentBuffer = [];
       state.sendWindow = [dotMs(state.charSpeedWpm), dotMs(state.charSpeedWpm) * 3];
       refreshMeters();
-      renderProgress();
+      render();
       scheduleSave();
     });
   }

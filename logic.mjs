@@ -130,6 +130,10 @@ export var CHAR_SOLID_MIN_REPS = 5;
 export var CHAR_SOLID_ACC = 0.9;
 export var EFF_WPM_MIN = 3;
 
+export function effAfterUnlockDrop(eff, drop) {
+  return Math.max(EFF_WPM_MIN, eff - drop);
+}
+
 export function charAccuracy(c) {
   var s = state.charStats[c];
   if (!s || s.t < CHAR_SOLID_MIN_REPS) return null;
@@ -185,7 +189,7 @@ export function maybePromote() {
     // the effective/Farnsworth speed back down, without touching the
     // character speed itself (Koch's core tenet: characters are always
     // learned at full speed) - it then ramps back up via raiseEff as usual.
-    state.effWpm = Math.max(EFF_WPM_MIN, state.effWpm - state.effDropOnUnlock);
+    state.effWpm = effAfterUnlockDrop(state.effWpm, state.effDropOnUnlock);
   }
   else state.charSpeedWpm = promo.value;
   state.recentBuffer = [];
