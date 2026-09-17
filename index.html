@@ -508,7 +508,7 @@ import {
   state, timing, unlockedChars, weightedChar, weightedGroup,
   recordResult, nextPromotion, toDots, buildSchedule,
   classifySendPress, sendLetterGapMs, dotMs, alignCopyAttempt,
-  charAccuracy, unlockBlockedBy, PROMOTION_BUFFER_SIZE
+  charAccuracy, unlockBlockedBy, PROMOTION_BUFFER_SIZE, effAfterUnlockDrop
 } from './logic.mjs';
 
 (function () {
@@ -546,6 +546,10 @@ import {
       }
     } else if (promo.type === "unlock") {
       action = "das nächste Zeichen (\"" + promo.value + "\") freigeschaltet";
+      if (state.effDropOnUnlock > 0) {
+        var afterDrop = effAfterUnlockDrop(state.effWpm, state.effDropOnUnlock);
+        action += " (Effektiv-Tempo geht dabei zurück auf " + afterDrop + " WPM)";
+      }
       var blockedChar = unlockBlockedBy();
       if (blockedChar) {
         nextCharHint = '<p class="hint">Vorher muss "' + blockedChar + '" in der Übersicht unten grün (sicher) stehen.</p>';
@@ -583,6 +587,7 @@ import {
       if (typeof d.effWpm === "number") state.effWpm = d.effWpm;
       if (typeof d.autoAdvance === "boolean") state.autoAdvance = d.autoAdvance;
       if (typeof d.fixedGroups === "boolean") state.fixedGroups = d.fixedGroups;
+      if (typeof d.effDropOnUnlock === "number") state.effDropOnUnlock = d.effDropOnUnlock;
       if (d.charStats && typeof d.charStats === "object") state.charStats = d.charStats;
       if (typeof d.totalReps === "number") state.totalReps = d.totalReps;
       if (Array.isArray(d.sendWindow) && d.sendWindow.length) state.sendWindow = d.sendWindow;
@@ -602,6 +607,7 @@ import {
         effWpm: state.effWpm,
         autoAdvance: state.autoAdvance,
         fixedGroups: state.fixedGroups,
+        effDropOnUnlock: state.effDropOnUnlock,
         charStats: state.charStats,
         totalReps: state.totalReps,
         sendWindow: state.sendWindow,
@@ -1073,8 +1079,13 @@ import {
         '<div class="switch-row"><input type="checkbox" id="fixedGroups"> <label for="fixedGroups">Feste 5er-Gruppen beim H&ouml;ren</label></div>' +
         '<label class="field">Zeichen-Tempo: <span class="mono" id="charSpeedOut"></span> WPM' +
           '<input type="range" id="charSpeedSlider" min="10" max="35" step="1"></label>' +
+        '<p class="hint">Das Zeichen-Tempo ist dein eigentliches Lernziel – so schnell werden Punkt/Strich innerhalb eines Buchstabens tatsächlich gesendet. Es sollte nicht unter 10&nbsp;WPM fallen, sonst gewöhnt man sich ans Abzählen statt ans Hören. Grobe, unverbindliche Richtwerte: 12&nbsp;WPM = gemächlich, 15&nbsp;WPM = solider Standard, 20&nbsp;WPM = zügig, wie im echten Amateurfunkverkehr.</p>' +
         '<label class="field">Effektiv-Tempo: <span class="mono" id="effSpeedOut"></span> WPM' +
           '<input type="range" id="effSpeedSlider" min="3" max="35" step="1"></label>' +
+        '<p class="hint">Das Effektiv-Tempo bestimmt nur die Pausen zwischen den Zeichen und nähert sich bei genug Trefferquote Schritt für Schritt dem Zeichen-Tempo an. Ein neues Zeichen wird erst freigeschaltet, wenn zusätzlich das Effektiv-Tempo das Zeichen-Tempo erreicht und das zuletzt freigeschaltete Zeichen sicher sitzt.</p>' +
+        '<label class="field">Rücksprung bei neuem Zeichen: <span class="mono" id="effDropOut"></span> WPM' +
+          '<input type="range" id="effDropSlider" min="0" max="10" step="1"></label>' +
+        '<p class="hint">Sobald ein neues Zeichen freigeschaltet wird, sinkt das Effektiv-Tempo um diesen Wert wieder ab – das gibt mehr Zeit, sich auf den neuen Buchstaben einzustellen, bevor wieder hochtrainiert wird. 0 = kein Rücksprung.</p>' +
         '<div id="promotionBlock">' + promotionBlockHtml() + '</div>' +
         '<div class="row"><button class="btn secondary" id="resetBtn">Fortschritt zurücksetzen</button></div>' +
       '</fieldset>' +
@@ -1119,6 +1130,12 @@ import {
       refreshMeters();
       scheduleSave();
     });
+    box.querySelector("#effDropSlider").addEventListener("input", function (e) {
+      state.effDropOnUnlock = parseInt(e.target.value, 10);
+      box.querySelector("#effDropOut").textContent = state.effDropOnUnlock;
+      box.querySelector("#promotionBlock").innerHTML = promotionBlockHtml();
+      scheduleSave();
+    });
     box.querySelector("#resetBtn").addEventListener("click", function () {
       state.unlockedCount = 2;
       state.charSpeedWpm = 15;
@@ -1128,7 +1145,7 @@ import {
       state.recentBuffer = [];
       state.sendWindow = [dotMs(state.charSpeedWpm), dotMs(state.charSpeedWpm) * 3];
       refreshMeters();
-      renderProgress();
+      render();
       scheduleSave();
     });
   }
@@ -1137,13 +1154,16 @@ import {
     var a = document.getElementById("autoAdvance");
     var cs = document.getElementById("charSpeedSlider");
     var es = document.getElementById("effSpeedSlider");
+    var ed = document.getElementById("effDropSlider");
     if (!a) return;
     a.checked = state.autoAdvance;
     document.getElementById("fixedGroups").checked = state.fixedGroups;
     cs.value = state.charSpeedWpm;
     es.value = state.effWpm;
+    ed.value = state.effDropOnUnlock;
     document.getElementById("charSpeedOut").textContent = state.charSpeedWpm;
     document.getElementById("effSpeedOut").textContent = state.effWpm;
+    document.getElementById("effDropOut").textContent = state.effDropOnUnlock;
   }
 
   // ---------- Erklär-Block (Startseite) ----------

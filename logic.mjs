@@ -38,6 +38,7 @@ export const state = {
   effWpm: 5,
   autoAdvance: true,
   fixedGroups: true,
+  effDropOnUnlock: 3,
   charStats: {},   // letter -> {c: correct, t: total}
   totalReps: 0,
   recentBuffer: [],  // rolling booleans for promotion check
@@ -127,6 +128,11 @@ export function weightedGroup(len) {
 export var PROMOTION_BUFFER_SIZE = 30;
 export var CHAR_SOLID_MIN_REPS = 5;
 export var CHAR_SOLID_ACC = 0.9;
+export var EFF_WPM_MIN = 3;
+
+export function effAfterUnlockDrop(eff, drop) {
+  return Math.max(EFF_WPM_MIN, eff - drop);
+}
 
 export function charAccuracy(c) {
   var s = state.charStats[c];
@@ -177,7 +183,14 @@ export function maybePromote() {
     return; // most recently unlocked char isn't proven yet - keep practicing before adding another
   }
   if (promo.type === "raiseEff") state.effWpm = promo.value;
-  else if (promo.type === "unlock") state.unlockedCount++;
+  else if (promo.type === "unlock") {
+    state.unlockedCount++;
+    // Give the new character more inter-character processing time by easing
+    // the effective/Farnsworth speed back down, without touching the
+    // character speed itself (Koch's core tenet: characters are always
+    // learned at full speed) - it then ramps back up via raiseEff as usual.
+    state.effWpm = effAfterUnlockDrop(state.effWpm, state.effDropOnUnlock);
+  }
   else state.charSpeedWpm = promo.value;
   state.recentBuffer = [];
 }
